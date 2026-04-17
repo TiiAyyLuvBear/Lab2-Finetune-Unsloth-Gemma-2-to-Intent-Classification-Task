@@ -1,0 +1,30 @@
+# ── .gitignore ──────────────────────────────────────────────────────────────────
+# Output & data (generated at runtime, not tracked)
+outputs/
+sample_data/*.csv
+sample_data/*.json
+sample_data/processed/
+banking_intent_model/  # Optional: track this separately if you want to include model files
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Virtual env
+venv/
+.venv/
+pyvenv.cfg
+
+# Model files (optional: track banking_intent_model/ separately)
+# banking_intent_model/
+
+# Kaggle / HF credentials
+.kaggle/
+*.pem

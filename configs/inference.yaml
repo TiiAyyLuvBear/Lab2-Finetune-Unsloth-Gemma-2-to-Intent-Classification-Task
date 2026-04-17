@@ -1,0 +1,25 @@
+# ── inference.yaml ────────────────────────────────────────────────────────────
+# Cấu hình inference cho banking-intent model đã fine-tune
+# ── Model ──────────────────────────────────────────────────────────────────────
+model:
+  model_path: "banking_intent_model"        # Thư mục chứa adapter + tokenizer
+  max_seq_length: 2048                      # Phải khớp với training config
+  load_in_4bit: true                        # Bật 4-bit để inference tiết kiệm VRAM
+
+# ── Generation ───────────────────────────────────────────────────────────────
+generation:
+  max_new_tokens: 64                        # Độ dài tối đa của intent text
+  do_sample: false                          # false = greedy (kết quả ổn định)
+  temperature: 0.0                          # 0.0 khi do_sample=False
+  top_p: 1.0                                # Bỏ qua nucleus sampling khi do_sample=False
+  use_cache: true                            # Bật KV cache để tăng tốc
+
+# ── Paths ──────────────────────────────────────────────────────────────────────
+data:
+  id2label_path: "sample_data/id2label.csv" # Mapping label (số) → intent TEXT
+  test_file: "sample_data/test.csv"         # File test để đánh giá
+
+# ── Evaluation ───────────────────────────────────────────────────────────────
+evaluation:
+  batch_size: 8                              # Batch size khi đánh giá nhiều mẫu
+  seed: 42                                   # Seed cho random sampling khi hiển thị mẫu

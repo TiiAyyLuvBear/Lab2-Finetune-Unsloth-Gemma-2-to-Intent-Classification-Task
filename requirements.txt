@@ -1,0 +1,24 @@
+# Core dependencies
+torch>=2.0.0
+transformers>=4.56.0
+datasets>=2.14.0
+accelerate>=0.25.0
+peft>=0.6.0
+trl>=0.22.0
+sentencepiece
+protobuf
+huggingface_hub>=0.14.0
+
+# Unsloth (LLaMA / Mistral / Phi-3 accelerated fine-tuning)
+unsloth @ git+https://github.com/unslothai/unsloth.git
+
+# Utilities
+pandas>=2.0.0
+pyyaml>=6.0
+tqdm>=4.65.0
+bitsandbytes>=0.41.0  # 4-bit quantization support
+hf_transfer>=0.34.0  # Tăng tốc download model
+
+# Optional experiment tracking
+# wandb>=0.15.0
+# tensorboard>=2.14.0

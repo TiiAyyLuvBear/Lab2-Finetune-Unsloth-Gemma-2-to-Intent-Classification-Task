@@ -1,0 +1,45 @@
+# ── train.yaml ───────────────────────────────────────────────────────────────
+# Cấu hình training Unsloth QLoRA cho Banking Intent Classification (77 intents)
+# ── Model ─────────────────────────────────────────────────────────────────────
+model:
+  name: "unsloth/gemma-2-9b-bnb-4bit"    # Base model (4-bit quantized)
+  max_seq_length: 2048                     #上下文窗口长度
+  dtype: null                              # null = auto, float16 = Tesla T4/V100, bfloat16 = Ampere+
+  load_in_4bit: true                        # QLoRA: bật 4-bit quantization
+
+# ── LoRA ──────────────────────────────────────────────────────────────────────
+lora:
+  r: 16                                     # Rank (8, 16, 32, 64, 128 đề xem xét)
+  lora_alpha: 16                            # Scaling factor
+  lora_dropout: 0.0                         # 0.0 = tối ưu VRAM
+  bias: "none"                             # "none" = tối ưu
+  gradient_checkpointing: "unsloth"        # "unsloth" giảm 30% VRAM, fit 2x batch size
+  target_modules:
+    - "q_proj"
+    - "k_proj"
+    - "v_proj"
+    - "o_proj"
+    - "gate_proj"
+    - "up_proj"
+    - "down_proj"
+
+# ── Training ───────────────────────────────────────────────────────────────────
+training:
+  per_device_train_batch_size: 2           # Batch trên mỗi GPU
+  gradient_accumulation_steps: 4           # Effective batch = 2 × 4 = 8
+  learning_rate: 2e-4                      # Giảm LR để học ổn định hơn
+  num_train_epochs: 3                       # Số epoch (tăng từ 1 → 3)
+  max_steps: -1                             # -1 = train đủ số epoch
+  warmup_steps: 5                           # Warmup
+  logging_steps: 20                         # Tần suất log
+  optim: "adamw_8bit"                       # Unsloth memory-efficient optimizer
+  weight_decay: 0.001
+  lr_scheduler_type: "linear"              # Linear decay
+  seed: 3407
+  packing: false                            # false = mỗi sequence độc lập
+
+# ── Output ────────────────────────────────────────────────────────────────────
+output:
+  dir: "outputs"                            # Thư mục lưu checkpoint
+  save_merged: false                       # true = lưu merged model (không có LoRA)
+  report_to: "none"                         # "none", "wandb", "tensorboard", ...
