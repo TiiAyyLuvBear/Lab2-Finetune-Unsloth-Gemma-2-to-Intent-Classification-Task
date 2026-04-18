@@ -2,7 +2,7 @@
 # Cấu hình inference cho banking-intent model đã fine-tune
 # ── Model ──────────────────────────────────────────────────────────────────────
 model:
-  model_path: "banking_intent_model"        # Thư mục chứa adapter + tokenizer
+  model_path: "outputs/banking_intent_model"        # Thư mục chứa adapter + tokenizer
   max_seq_length: 2048                      # Phải khớp với training config
   load_in_4bit: true                        # Bật 4-bit để inference tiết kiệm VRAM
 

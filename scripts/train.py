@@ -10,18 +10,20 @@ import os
 import shutil
 from pathlib import Path
 
-import pandas as pd
-import torch
-import yaml
-from datasets import load_dataset
-from trl import SFTConfig, SFTTrainer
-
 try:
     from unsloth import FastLanguageModel
     UNSLOTH_AVAILABLE = True
 except ImportError:
     UNSLOTH_AVAILABLE = False
     logging.warning("Unsloth không được cài đặt.")
+    
+import pandas as pd
+import torch
+import yaml
+from datasets import load_dataset
+from trl import SFTConfig, SFTTrainer
+
+
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -71,18 +73,19 @@ def setup_model(cfg: dict):
         dtype=dtype,
         load_in_4bit=load_in_4bit,
     )
-    logger.info("Gắn LoRA adapters (r=%s, alpha=%s)", cfg["training"]["lora_r"], cfg["training"]["lora_alpha"])
+    logger.info("Gắn LoRA adapters (r=%s, alpha=%s)", cfg["lora"]["r"], cfg["lora"]["lora_alpha"])
 
+    lora_cfg = cfg.get("lora", {})
     model = FastLanguageModel.get_peft_model(
         model,
-        r=cfg["training"].get("lora_r", 16),
-        target_modules=cfg["training"].get("lora_target_modules",
+        r=lora_cfg.get("r", 16),
+        target_modules=lora_cfg.get("target_modules",
             ["q_proj", "k_proj", "v_proj", "o_proj",
              "gate_proj", "up_proj", "down_proj"]),
-        lora_alpha=cfg["training"].get("lora_alpha", 16),
-        lora_dropout=cfg["training"].get("lora_dropout", 0),
-        bias=cfg["training"].get("bias", "none"),
-        use_gradient_checkpointing=cfg["training"].get("gradient_checkpointing", "unsloth"),
+        lora_alpha=lora_cfg.get("lora_alpha", 16),
+        lora_dropout=lora_cfg.get("lora_dropout", 0),
+        bias=lora_cfg.get("bias", "none"),
+        use_gradient_checkpointing=lora_cfg.get("gradient_checkpointing", "unsloth"),
         random_state=cfg["training"].get("seed", 3407),
     )
     return model, tokenizer
@@ -95,6 +98,8 @@ def main():
     parser.add_argument("--output_dir", type=str, default="outputs", help="Thư mục lưu checkpoint")
     parser.add_argument("--id2label_path", type=str, default=None,
                         help="Đường dẫn file id2label.csv (mặc định: {data_dir}/id2label.csv)")
+    parser.add_argument("--resume", action="store_true",
+                        help="Tiếp tục training từ checkpoint đã lưu (bỏ qua load model mới)")
     args = parser.parse_args()
 
     # ── Load config ────────────────────────────────────────────────────────────
@@ -107,9 +112,34 @@ def main():
     logger.info("Đã load %d intent labels từ %s", len(id2label), id2label_path)
 
     # ── Setup model ────────────────────────────────────────────────────────────
-    if not UNSLOTH_AVAILABLE:
-        raise RuntimeError("Unsloth is required for this script. Cài đặt: pip install unsloth")
-    model, tokenizer = setup_model(cfg)
+    model_dir = Path(args.output_dir) / "banking_intent_model"
+    checkpoint_dirs = list(Path(args.output_dir).glob("checkpoint-*"))
+    resume_from = checkpoint_dirs[0] if checkpoint_dirs else None
+
+    if args.resume and model_dir.exists():
+        logger.info("Resume mode: Load model từ %s", model_dir)
+        model, tokenizer = FastLanguageModel.from_pretrained(
+            model_name=str(model_dir),
+            max_seq_length=cfg["model"].get("max_seq_length", 2048),
+            dtype=None,
+            load_in_4bit=cfg["model"].get("load_in_4bit", True),
+        )
+        # Re-attach LoRA adapters after loading
+        model = FastLanguageModel.get_peft_model(
+            model,
+            r=cfg["lora"].get("r", 16),
+            target_modules=cfg["lora"].get("target_modules"),
+            lora_alpha=cfg["lora"].get("lora_alpha", 16),
+            lora_dropout=cfg["lora"].get("lora_dropout", 0),
+            bias=cfg["lora"].get("bias", "none"),
+            use_gradient_checkpointing=cfg["lora"].get("gradient_checkpointing", "unsloth"),
+            random_state=cfg["training"].get("seed", 3407),
+        )
+        logger.info("LoRA adapters đã re-attached.")
+    else:
+        if not UNSLOTH_AVAILABLE:
+            raise RuntimeError("Unsloth is required for this script. Cài đặt: pip install unsloth")
+        model, tokenizer = setup_model(cfg)
 
     # ── Load & format dataset ──────────────────────────────────────────────────
     train_csv = Path(args.data_dir) / "train.csv"
@@ -128,29 +158,30 @@ def main():
     # ── SFT Trainer ─────────────────────────────────────────────────────────────
     t_cfg = cfg["training"]
     sft_cfg = SFTConfig(
-        per_device_train_batch_size=t_cfg.get("per_device_train_batch_size", 2),
-        gradient_accumulation_steps=t_cfg.get("gradient_accumulation_steps", 4),
-        warmup_steps=t_cfg.get("warmup_steps", 5),
-        num_train_epochs=t_cfg.get("num_train_epochs", 3),
-        max_steps=t_cfg.get("max_steps", -1),
-        learning_rate=t_cfg.get("learning_rate", 2e-4),
-        logging_steps=t_cfg.get("logging_steps", 20),
-        optim=t_cfg.get("optim", "adamw_8bit"),
-        weight_decay=t_cfg.get("weight_decay", 0.001),
-        lr_scheduler_type=t_cfg.get("lr_scheduler_type", "linear"),
-        seed=t_cfg.get("seed", 3407),
-        output_dir=args.output_dir,
-        report_to=t_cfg.get("report_to", "none"),
-        packing=t_cfg.get("packing", False),
+        per_device_train_batch_size=int(t_cfg.get("per_device_train_batch_size", 2)),
+        gradient_accumulation_steps=int(t_cfg.get("gradient_accumulation_steps", 4)),
+        warmup_steps=int(t_cfg.get("warmup_steps", 5)),
+        num_train_epochs=int(t_cfg.get("num_train_epochs", 3)),
+        max_steps=int(t_cfg.get("max_steps", -1)),
+        learning_rate=float(t_cfg.get("learning_rate", 2e-4)),
+        logging_steps=int(t_cfg.get("logging_steps", 20)),
+        optim=str(t_cfg.get("optim", "adamw_8bit")),
+        weight_decay=float(t_cfg.get("weight_decay", 0.001)),
+        lr_scheduler_type=str(t_cfg.get("lr_scheduler_type", "linear")),
+        seed=int(t_cfg.get("seed", 3407)),
+        output_dir=str(args.output_dir),
+        report_to=str(t_cfg.get("report_to", "none")),
+        packing=bool(t_cfg.get("packing", False)),
     )
 
     trainer = SFTTrainer(
         model=model,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         train_dataset=dataset,
         dataset_text_field="text",
         max_seq_length=cfg["model"].get("max_seq_length", 2048),
         args=sft_cfg,
+        resume_from_checkpoint=resume_from,
     )
     logger.info("Bắt đầu training ... (epochs=%d, batch=%d, grad_accum=%d)",
                  t_cfg.get("num_train_epochs"), t_cfg.get("per_device_train_batch_size"),

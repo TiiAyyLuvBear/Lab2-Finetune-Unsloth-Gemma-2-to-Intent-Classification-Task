@@ -5,6 +5,11 @@ sample_data/*.csv
 sample_data/*.json
 sample_data/processed/
 banking_intent_model/  # Optional: track this separately if you want to include model files
+bin/
+lib/
+lib64/
+share/
+unsloth_compiled_cache/
 
 # Python
 __pycache__/
