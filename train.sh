@@ -1,6 +1,6 @@
 #!/bin/bash
 # ── train.sh ─────────────────────────────────────────────────────────────────
-# Full training pipeline: chuẩn bị dữ liệu + fine-tune Llama-3.1-8B QLoRA.
+# Full training pipeline: chuẩn bị dữ liệu + fine-tune Gemma2-9B QLoRA.
 # Yêu cầu: GPU >= 14 GB VRAM (Tesla T4 / A10 / A100 ...)
 
 set -e

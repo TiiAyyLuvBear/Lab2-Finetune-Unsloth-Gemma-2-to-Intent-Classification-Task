@@ -1,6 +1,6 @@
 """
 train.py
-Fine-tune Llama-3.1-8B (QLoRA / Unsloth) cho bài toán Banking Intent Classification.
+Fine-tune Gemma2-9B (QLoRA / Unsloth) cho bài toán Banking Intent Classification.
 Mỗi utterance được format theo template Alpaca Instruction-Tuning.
 """
 
