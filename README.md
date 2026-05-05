@@ -14,6 +14,7 @@ Fine-tune **Gemma-2-9B** (QLoRA) cho bài toán phân loại 77 banking intents.
 - [Evaluation](#evaluation)
 - [Dataset](#dataset)
 - [Troubleshooting](#troubleshooting)
+- [Video Demo](#video-demo)
 
 ---
 
@@ -46,6 +47,8 @@ Fine-tune **Gemma-2-9B** (QLoRA) cho bài toán phân loại 77 banking intents.
 ```
 
 ---
+
+
 
 ## Environment Setup
 
@@ -471,3 +474,8 @@ pandas
 pyyaml
 scikit-learn
 ```
+
+## Video Demo
+
+
+- Google Drive (public): <https://drive.google.com/file/d/1amOKIxbHOPyUvCg0fdTUacVmSCssorF0/view?usp=sharing>
